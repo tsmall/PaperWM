@@ -92,7 +92,6 @@ class Space extends Array {
         this.visible = [];
         this._populated = false;
 
-
         let clip = new Clutter.Actor();
         this.clip = clip;
         let actor = new Clutter.Actor();
@@ -734,6 +733,8 @@ class Spaces extends Map {
         this.signals = signals;
         this.selectedSpace = undefined;
         this._inPreview = false;
+        this._yPositions = [0.95, 0.10, 0.035, 0.01];
+
 
         signals.connect(screen, 'notify::n-workspaces',
                         utils.dynamic_function_ref('workspacesChanged', this).bind(this));
@@ -968,6 +969,8 @@ class Spaces extends Map {
         this.monitors.set(monitor, toSpace);
 
         Navigator.switchWorkspace(to, from);
+        this._inPreview = false;
+        this.selectedSpace = toSpace;
 
         let fromSpace = this.spaceOf(from);
         if (toSpace.monitor === fromSpace.monitor) {
@@ -998,6 +1001,103 @@ class Spaces extends Map {
                 continue;
             monitor.clickOverlay.activate();
         }
+    }
+
+    selectSpace(direction, move) {
+        const scale = 0.9;
+        let space = this.spaceOf(screen.get_active_workspace());
+        let mru = [space, ...this.stack];
+
+        if (!this._inPreview) {
+            let monitor = space.monitor;
+            this.selectedSpace = space;
+            this._inPreview = space;
+
+            let heights = [0].concat(this._yPositions.slice(1));
+
+            let cloneParent = space.clip.get_parent();
+            mru.forEach((space, i) => {
+                TopBar.updateIndicatorPosition(space.workspace);
+                space.clip.set_position(monitor.x, monitor.y);
+
+                let scaleX = monitor.width/space.width;
+                let scaleY = monitor.height/space.height;
+                space.clip.set_scale(scaleX, scaleY);
+
+                let h = heights[i];
+                if (h === undefined)
+                    h = heights[heights.length-1];
+                space.actor.set_position(0, space.height*h);
+
+                space.actor.scale_y = scale + (1 - i)*0.01;
+                space.actor.scale_x = scale + (1 - i)*0.01;
+                if (mru[i - 1] === undefined)
+                    return;
+                cloneParent.set_child_below_sibling(
+                    space.clip,
+                    mru[i - 1].clip
+                );
+                Tweener.removeTweens(space.actor);
+                space.actor.show();
+
+                let selected = space.selectedWindow;
+                if (selected && selected.fullscreen) {
+                    selected.clone.y = Main.panel.actor.height + prefs.vertical_margin;
+                }
+            });
+
+            space.actor.scale_y = 1;
+            space.actor.scale_x = 1;
+
+            let selected = space.selectedWindow;
+            if (selected && selected.fullscreen) {
+                Tweener.addTween(selected.clone, {
+                    y: Main.panel.actor.height + prefs.vertical_margin,
+                    time: 0.25
+                });
+            }
+        }
+
+        let from = mru.indexOf(this.selectedSpace);
+        let to;
+        if (direction === Meta.MotionDirection.DOWN)
+            to = from + 1;
+        else
+            to = from - 1;
+        if (to < 0 || to >= mru.length) {
+            return true;
+        }
+        let oldSpace = this.selectedSpace;
+        let newSpace = mru[to];
+        this.selectedSpace = newSpace;
+
+        TopBar.updateWorkspaceIndicator(newSpace.workspace.index());
+
+        let heights = this._yPositions;
+
+        mru.forEach((space, i) => {
+            let actor = space.actor;
+            let h;
+            if (to === i)
+                h = heights[1];
+            else if (to + 1 === i)
+                h = heights[2];
+            else if (to - 1 === i)
+                h = heights[0];
+            else if (i > to)
+                h = heights[3];
+            else if (i < to)
+                h = 1;
+
+            Tweener.addTween(actor,
+                             {y: h*space.height,
+                              time: 0.25,
+                              scale_x: scale + (to - i)*0.01,
+                              scale_y: scale + (to - i)*0.01,
+                              transition: 'easeInOutQuad',
+                             });
+
+        });
     }
 
     addSpace(workspace) {
@@ -1084,6 +1184,7 @@ class Spaces extends Map {
             Main.activateWindow(metaWindow);
     }
 }
+Signals.addSignalMethods(Spaces.prototype);
 
 function registerWindow(metaWindow) {
     let actor = metaWindow.get_compositor_private();
