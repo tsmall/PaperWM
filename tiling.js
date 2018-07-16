@@ -1009,6 +1009,8 @@ class Spaces extends Map {
         let mru = [space, ...this.stack];
 
         if (!this._inPreview) {
+            if (Main.panel.statusArea.appMenu)
+                Main.panel.statusArea.appMenu.container.hide();
             let monitor = space.monitor;
             this.selectedSpace = space;
             this._inPreview = space;
@@ -1067,7 +1069,6 @@ class Spaces extends Map {
         if (to < 0 || to >= mru.length) {
             return true;
         }
-        let oldSpace = this.selectedSpace;
         let newSpace = mru[to];
         this.selectedSpace = newSpace;
 
