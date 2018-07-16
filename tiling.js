@@ -732,6 +732,8 @@ class Spaces extends Map {
 
         let signals = new utils.Signals();
         this.signals = signals;
+        this.selectedSpace = undefined;
+        this._inPreview = false;
 
         signals.connect(screen, 'notify::n-workspaces',
                         utils.dynamic_function_ref('workspacesChanged', this).bind(this));
@@ -779,6 +781,9 @@ class Spaces extends Map {
         }
 
         this.monitorsChanged();
+
+        let visible = Main.layoutManager.monitors.map(m => this.monitors.get(m));
+        this.stack = this.mru().filter(s => !visible.includes(s));
     }
 
     /**
@@ -957,13 +962,18 @@ class Spaces extends Map {
         let to = screen.get_workspace_by_index(toIndex);
         let from = screen.get_workspace_by_index(fromIndex);
         let toSpace = this.spaceOf(to);
-        this.monitors.set(toSpace.monitor, toSpace);
+
+        this.stack = this.stack.filter(s => s !== toSpace);
+        let monitor = toSpace.monitor;
+        this.monitors.set(monitor, toSpace);
 
         Navigator.switchWorkspace(to, from);
 
         let fromSpace = this.spaceOf(from);
-        if (toSpace.monitor === fromSpace.monitor)
+        if (toSpace.monitor === fromSpace.monitor) {
+            this.stack.splice(0, 0, fromSpace);
             return;
+        }
 
         TopBar.setMonitor(toSpace.monitor);
         toSpace.monitor.clickOverlay.deactivate();
@@ -973,7 +983,6 @@ class Spaces extends Map {
         let pointer = deviceManager.get_client_pointer();
         let [gdkscreen, pointerX, pointerY] = pointer.get_position();
 
-        let monitor = toSpace.monitor;
         pointerX -= monitor.x;
         pointerY -= monitor.y;
         if (pointerX < 0 ||
