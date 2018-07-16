@@ -968,11 +968,10 @@ class Spaces extends Map {
         let monitor = toSpace.monitor;
         this.monitors.set(monitor, toSpace);
 
-        Navigator.switchWorkspace(to, from);
-        this._inPreview = false;
-        this.selectedSpace = toSpace;
-
         let fromSpace = this.spaceOf(from);
+
+        this.animateToSpace(toSpace, fromSpace);
+
         if (toSpace.monitor === fromSpace.monitor) {
             this.stack.splice(0, 0, fromSpace);
             return;
@@ -1098,6 +1097,66 @@ class Spaces extends Map {
                              });
 
         });
+    }
+
+    animateToSpace(to, from, callback) {
+        TopBar.updateWorkspaceIndicator(to.workspace.index());
+
+        let xDest = 0, yDest = global.screen_height;
+
+        this._inPreview = false;
+        this.selectedSpace = to;
+
+        to.actor.show();
+        let selected = to.selectedWindow;
+        if (selected)
+            ensureViewport(selected, to, true);
+
+        if (from) {
+            from.startAnimate();
+        }
+
+        Tweener.addTween(to.actor,
+                         { x: 0,
+                           y: 0,
+                           scale_x: 1,
+                           scale_y: 1,
+                           time: 0.25,
+                           transition: 'easeInOutQuad',
+                           onComplete: () => {
+                               Meta.enable_unredirect_for_screen(screen);
+
+                               to.clip.raise_top();
+                               callback && callback();
+                           }
+                         });
+
+        let next = to.clip.get_next_sibling();
+
+        let visible = new Map();
+        for (let [monitor, space] of this.monitors) {
+            visible.set(space, true);
+        }
+        let scale = 0.9;
+        while (next !== null) {
+            if (!visible.get(next.space))
+                Tweener.addTween(
+                    next.first_child,
+                    { x: xDest,
+                      y: yDest,
+                      scale_x: scale,
+                      scale_y: scale,
+                      time: 0.25,
+                      transition: 'easeInOutQuad',
+                      onComplete() {
+                          this.set_position(0, global.screen_height*0.1);
+                          this.hide();
+                      },
+                      onCompleteScope: next.first_child
+                    });
+
+            next = next.get_next_sibling();
+        }
     }
 
     addSpace(workspace) {
@@ -1237,7 +1296,6 @@ function enable() {
 
     function initWorkspaces() {
         spaces = new Spaces();
-        Navigator.switchWorkspace(screen.get_active_workspace());
         spaces.mru().reverse().forEach(s => {
             s.selectedWindow && ensureViewport(s.selectedWindow, s, true);
             s.monitor.clickOverlay.show();

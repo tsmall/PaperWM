@@ -304,14 +304,16 @@ var PreviewedWindowNavigator = new Lang.Class({
         if (workspaceMru)
             this.space.monitor.clickOverlay.hide();
 
-        let force = workspaceMru;
+        let force = Tiling.spaces._inPreview;
         navigating = false; workspaceMru = false;
+
+        this.space = Tiling.spaces.selectedSpace;
 
         let from = this.from;
         if(!this.was_accepted) {
             // Abort the navigation
             this.space = from;
-            if (this._startWindow.get_compositor_private())
+            if (this.startWindow && this._startWindow.get_compositor_private())
                 this.space.selectedWindow = this._startWindow;
             else
                 this.space.selectedWindow = display.focus_window;
@@ -331,7 +333,7 @@ var PreviewedWindowNavigator = new Lang.Class({
             // Animate the selected space into full view - normally this
             // happens on workspace switch, but activating the same workspace
             // again doesn't trigger a switch signal
-            switchWorkspace(this.space.workspace);
+            Tiling.spaces.animateToSpace(this.space);
         }
 
         let selected = this.space.selectedWindow;
@@ -368,61 +370,4 @@ var PreviewedWindowNavigator = new Lang.Class({
 function preview_navigate(meta_window, space, {display, screen, binding}) {
     let tabPopup = new PreviewedWindowNavigator();
     tabPopup.show(binding.is_reversed(), binding.get_name(), binding.get_mask());
-}
-
-function switchWorkspace(to, from, callback) {
-    TopBar.updateWorkspaceIndicator(to.index());
-
-    let xDest = 0, yDest = global.screen_height;
-
-    let toSpace = Tiling.spaces.spaceOf(to);
-    toSpace.actor.show();
-    let selected = toSpace.selectedWindow;
-    if (selected)
-        Tiling.ensureViewport(selected, toSpace, true);
-
-    if (from) {
-        Tiling.spaces.spaceOf(from).startAnimate();
-    }
-
-    Tweener.addTween(toSpace.actor,
-                     { x: 0,
-                       y: 0,
-                       scale_x: 1,
-                       scale_y: 1,
-                       time: 0.25,
-                       transition: 'easeInOutQuad',
-                       onComplete: () => {
-                           Meta.enable_unredirect_for_screen(screen);
-
-                           toSpace.clip.raise_top();
-                           callback && callback();
-                       }
-                     });
-
-    let next = toSpace.clip.get_next_sibling();
-
-    let visible = new Map();
-    for (let [monitor, space] of Tiling.spaces.monitors) {
-        visible.set(space, true);
-    }
-    while (next !== null) {
-        if (!visible.get(next.space))
-            Tweener.addTween(
-                next.first_child,
-                { x: xDest,
-                  y: yDest,
-                  scale_x: scale,
-                  scale_y: scale,
-                  time: 0.25,
-                  transition: 'easeInOutQuad',
-                  onComplete() {
-                      this.set_position(0, global.screen_height*0.1);
-                      this.hide();
-                  },
-                  onCompleteScope: next.first_child
-                });
-
-        next = next.get_next_sibling();
-    }
 }
