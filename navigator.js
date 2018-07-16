@@ -219,29 +219,8 @@ var PreviewedWindowNavigator = new Lang.Class({
     },
 
     _doAction: function(mutterActionId) {
-        switch (mutterActionId) {
-        case Meta.KeyBindingAction.SWITCH_GROUP:
-            mutterActionId = Keybindings.idOf('previous-workspace');
-            break;
-        case Meta.KeyBindingAction.SWITCH_GROUP_BACKWARD:
-            mutterActionId = Keybindings.idOf('previous-workspace-backward');
-            break;
-        case Meta.KeyBindingAction.WORKSPACE_UP: // PageUp
-            mutterActionId = Keybindings.idOf('previous-workspace-backward');
-            break;
-        case Meta.KeyBindingAction.WORKSPACE_DOWN: // PageDown
-            mutterActionId = Keybindings.idOf('previous-workspace');
-            break;
-        }
 
         if (mutterActionId
-                   === Keybindings.idOf('previous-workspace-backward')) {
-            this.selectSpace(Meta.MotionDirection.UP);
-            return true;
-        } else if (mutterActionId === Keybindings.idOf('previous-workspace')) {
-            this.selectSpace(Meta.MotionDirection.DOWN);
-            return true;
-        } else if (mutterActionId
                    === Keybindings.idOf('move-previous-workspace')) {
             this.selectSpace(Meta.MotionDirection.DOWN, true);
             return true;

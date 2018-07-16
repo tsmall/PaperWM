@@ -1935,3 +1935,12 @@ function clipWindowActor(actor, monitor) {
 
     actor.set_clip(x, y, w, h);
 }
+
+
+function selectPreviousSpace(mw, space) {
+    spaces.selectSpace(Meta.MotionDirection.DOWN);
+}
+
+function selectPreviousSpaceBackwards(mw, space) {
+    spaces.selectSpace(Meta.MotionDirection.UP);
+}
