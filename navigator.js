@@ -31,6 +31,76 @@ var scale = 0.9;
 var navigating = false;
 var workspaceMru = false;
 
+class AltTab extends imports.ui.altTab.WindowList {
+    constructor(space, monitor) {
+        var AppIconMode = {
+            THUMBNAIL_ONLY: 1,
+            APP_ICON_ONLY: 2,
+            BOTH: 3,
+        };
+        super(display.get_tab_list(Meta.WindowType.NORMAL, space.workspace),
+             AppIconMode.BOTH);
+        this.space = space;
+        this.monitor = monitor;
+
+        this.signals = new utils.Signals();
+        this.signals.connect(this.space, 'select', this._select.bind(this));
+        this.actor.opacity = 0;
+        this.container = new Clutter.Actor();
+        this.container.set_size(monitor.width, monitor.height);
+        this.container.set_position(monitor.x, monitor.y);
+        this.container.add_actor(this.actor);
+        Main.uiGroup.add_actor(this.container);
+        this.actor.set_position(
+            this.monitor.x + Math.floor((this.monitor.width - this.actor.width)/2),
+            this.monitor.y + Math.floor((this.monitor.height - this.actor.height)/2));
+    }
+
+    show(animate) {
+        let time = animate ? 0.25 : 0;
+        this.actor.show();
+        Tweener.addTween(this.actor,
+                         {opacity: 255, time, transition: 'easeInQuad'});
+    }
+
+    hide(animate) {
+        let time = animate ? 0.25 : 0;
+        Tweener.addTween(this.actor,
+                         {opacity: 0, time, transition: 'easeInQuad',
+                          onComplete: () => this.actor.hide() });
+    }
+
+    _select(space) {
+        let window = space.selectedWindow;
+        let index = this.icons.findIndex(icon => icon.window === window);
+        if (index === -1)
+            return;
+        super.highlight(index);
+    }
+
+    _onDestroy() {
+        this.signals.destroy();
+    }
+
+    destroy() {
+        this.actor.destroy();
+    }
+}
+
+function cycleAltTab(metaWindow, space) {
+    let mru = display.get_tab_list(Meta.WindowType.NORMAL, space.workspace);
+    let index = mru.findIndex(w => w === metaWindow);
+    let select = mru[(index + 1) % mru.length];
+    Tiling.ensureViewport(select, space);
+}
+
+function cycleAltTabBackwards(metaWindow, space) {
+    let mru = display.get_tab_list(Meta.WindowType.NORMAL, space.workspace);
+    let index = mru.findIndex(w => w === metaWindow);
+    let select = mru[(index - 1) % mru.length];
+    Tiling.ensureViewport(select, space);
+}
+
 // Dummy class to satisfy `SwitcherPopup.SwitcherPopup`
 class SwitcherList {
     constructor() {
@@ -73,6 +143,7 @@ var PreviewedWindowNavigator = new Lang.Class({
         this.from = this.space;
         this.monitor = this.space.monitor;
         this.minimaps = new Map();
+        this.alttabs = new Map();
 
         this.space.startAnimate();
 
@@ -234,11 +305,18 @@ var PreviewedWindowNavigator = new Lang.Class({
                 let space = Tiling.spaces.selectedSpace;
                 let metaWindow = space.selectedWindow;
                 if (action.options.opensMinimap) {
+                    this.alttabs.forEach(a => a.hide());
                     this._showMinimap(space);
                 }
+                if (action.options.opensAltTab &&
+                    !this.minimaps.get(space)) {
+                    this.minimaps.forEach(a => a.hide());
+                    this._showAltTab(space);
+                }
                 action.handler(metaWindow, space);
-                if (space !== Tiling.spaces.selectedSpace)
+                if (space !== Tiling.spaces.selectedSpace) {
                     this.minimaps.forEach(m => m.hide());
+                }
                 return true;
             }
         }
@@ -272,6 +350,18 @@ var PreviewedWindowNavigator = new Lang.Class({
             minimap.hide();
     },
 
+    _showAltTab(space) {
+        let altTab = this.alttabs.get(space);
+        if (!altTab) {
+            altTab = new AltTab(space, this.monitor);
+            this.alttabs.set(space, altTab);
+            space.startAnimate();
+            altTab.show(true);
+        } else {
+            altTab.show();
+        }
+    },
+
     _select: function(position) {
         // debug('#preview', 'Select', this.space[index][0].title, index);
         if (!position)
@@ -302,6 +392,7 @@ var PreviewedWindowNavigator = new Lang.Class({
         debug('#preview', 'destroy', this.space.actor);
 
         this.minimaps.forEach(m => m.destroy());
+        this.alttabs.forEach(a => a.destroy());
 
         if (Main.panel.statusArea.appMenu)
             Main.panel.statusArea.appMenu.container.show();

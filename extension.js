@@ -64,6 +64,14 @@ function registerMinimapAction(name, handler) {
         {settings: settings, opensNavigator: true, opensMinimap: true});
 }
 
+function registerAltTabAction(name, handler) {
+    let settings = convenience.getSettings('org.gnome.Shell.Extensions.PaperWM.Keybindings');
+    Keybindings.registerAction(
+        name,
+        handler,
+        {settings: settings, opensNavigator: true, opensAltTab: true});
+}
+
 function init() {
     SESSIONID += "#";
     log(`init: ${SESSIONID}`);
@@ -80,14 +88,14 @@ function init() {
 
     let dynamic_function_ref = utils.dynamic_function_ref;
 
-    let liveAltTab = dynamic_function_ref('liveAltTab', LiveAltTab);
     let previewNavigate = dynamic_function_ref("preview_navigate", Navigator);
 
-    registerPaperAction('live-alt-tab',
-                          liveAltTab);
-    registerPaperAction('live-alt-tab-backward',
-                          liveAltTab,
-                          Meta.KeyBindingFlags.IS_REVERSED);
+    registerAltTabAction('live-alt-tab',
+                         dynamic_function_ref('cycleAltTab',
+                                              Navigator));
+    registerAltTabAction('live-alt-tab-backward',
+                         dynamic_function_ref('cycleAltTabBackwards',
+                                              Navigator));
 
     registerNavigatorAction('previous-workspace', Tiling.selectPreviousSpace);
     registerNavigatorAction('previous-workspace-backward',
