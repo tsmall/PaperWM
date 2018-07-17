@@ -824,9 +824,6 @@ class Spaces extends Map {
             this.forEach(space => {
                 space.layout(false);
                 let selected = activeSpace.selectedWindow;
-                if (selected) {
-                    ensureViewport(selected, space, true);
-                }
             });
             this.spaceContainer.show();
         };
@@ -1584,7 +1581,7 @@ function ensureViewport(meta_window, space, force) {
 
 
     let selected = space.selectedWindow;
-    if (!Navigator.workspaceMru && (selected.fullscreen
+    if (!spaces._inPreview && (selected.fullscreen
         || selected.get_maximized() === Meta.MaximizeFlags.BOTH)) {
         Tweener.addTween(selected.clone,
                          { y: frame.y - monitor.y,
@@ -1634,7 +1631,7 @@ function move_to(space, metaWindow, { x, y, delay, transition,
     let clone = metaWindow.clone;
     let delta = Math.round(clone.targetX) + space.targetX - x;
     let target = space.targetX - delta;
-    if (!Navigator.workspaceMru && delta === 0 && !force) {
+    if (!Navigator._inPreview && delta === 0 && !force) {
         space.moveDone();
         return;
     }
