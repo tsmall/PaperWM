@@ -231,8 +231,8 @@ var PreviewedWindowNavigator = new Lang.Class({
         } else {
             let action = Keybindings.byId(mutterActionId);
             if (action && action.options.activeInNavigator) {
-                let metaWindow = this.space.selectedWindow;
                 let space = Tiling.spaces.selectedSpace;
+                let metaWindow = space.selectedWindow;
                 if (action.options.opensMinimap) {
                     this._showMinimap(space);
                 }
