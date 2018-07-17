@@ -31,7 +31,7 @@ var scale = 0.9;
 var navigating = false;
 var workspaceMru = false;
 
-class AltTab extends imports.ui.altTab.WindowList {
+var AltTab = class AltTab extends imports.ui.altTab.WindowList {
     constructor(space, monitor) {
         var AppIconMode = {
             THUMBNAIL_ONLY: 1,
@@ -46,11 +46,8 @@ class AltTab extends imports.ui.altTab.WindowList {
         this.signals = new utils.Signals();
         this.signals.connect(this.space, 'select', this._select.bind(this));
         this.actor.opacity = 0;
-        this.container = new Clutter.Actor();
-        this.container.set_size(monitor.width, monitor.height);
-        this.container.set_position(monitor.x, monitor.y);
-        this.container.add_actor(this.actor);
-        Main.uiGroup.add_actor(this.container);
+        Main.uiGroup.add_actor(this.actor);
+        this.actor.width = Math.min(this.actor.width, monitor.width);
         this.actor.set_position(
             this.monitor.x + Math.floor((this.monitor.width - this.actor.width)/2),
             this.monitor.y + Math.floor((this.monitor.height - this.actor.height)/2));
