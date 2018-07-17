@@ -13,6 +13,7 @@ var Main = imports.ui.main;
 var Tweener = imports.ui.tweener;
 
 var Tiling = Extension.imports.tiling;
+var Utils = Extension.imports.utils;
 
 var prefs = Extension.imports.settings.prefs;
 
@@ -141,16 +142,66 @@ class WorkspaceMenu extends PanelMenu.Button {
 
         this.entry.actor.width = this.colors.actor.width;
         this.colors.entry.actor.width = this.colors.actor.width;
+        this.state = "NORMAL";
+    }
+
+    _finishWorkspaceSelect() {
+        this.state = "NORMAL";
+        if (Tiling.spaces.selectedSpace.workspace == screen.get_active_workspace()) {
+            Tiling.spaces.animateToSpace(Tiling.spaces.selectedSpace);
+        } else {
+            Tiling.spaces.selectedSpace.workspace.activate(global.get_current_time());
+        }
     }
 
     _onEvent(actor, event) {
-        if (this.menu &&
-            (event.type() == Clutter.EventType.TOUCH_BEGIN ||
+        if (!this.menu) {
+            log("?? no menu ??");
+            Utils.print_stacktrace();
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        if (this.state === "MENU" && !this.menu.isOpen) {
+            this.state = "NORMAL";
+        }
+
+        if ((event.type() == Clutter.EventType.TOUCH_BEGIN ||
              event.type() == Clutter.EventType.BUTTON_PRESS)) {
-            if (event.get_button() === Clutter.BUTTON_SECONDARY)
-                this.menu.toggle();
-            else
-                Main.overview.toggle();
+            if (this.state === "SCROLL") {
+                if (event.get_button() === Clutter.BUTTON_PRIMARY) {
+                    this._finishWorkspaceSelect();
+                }
+                return Clutter.EVENT_PROPAGATE;
+            } else {
+                if (event.get_button() === Clutter.BUTTON_SECONDARY) {
+                    this.menu.toggle();
+                    this.state = this.menu.isOpen ? "MENU" : "NORMAL";
+                } else {
+                    Main.overview.toggle();
+                }
+            }
+        }
+
+        if (Main.overview.visible) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        if (["NORMAL", "SCROLL"].includes(this.state) && event.type() === Clutter.EventType.SCROLL) {
+            if (this.state === "NORMAL") {
+                this.state = "SCROLL";
+                Tiling.spaces.selectedSpace.startAnimate();
+            }
+            let direction = event.get_scroll_direction();
+            if (direction === Clutter.ScrollDirection.UP) {
+                Tiling.spaces.selectSpace(Meta.MotionDirection.DOWN);
+            }
+            if (direction === Clutter.ScrollDirection.DOWN) {
+                Tiling.spaces.selectSpace(Meta.MotionDirection.UP);
+            }
+        }
+
+        if (this.state === "SCROLL" && event.type() === Clutter.EventType.LEAVE) {
+            this._finishWorkspaceSelect();
         }
 
         return Clutter.EVENT_PROPAGATE;
