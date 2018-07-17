@@ -286,10 +286,10 @@ function getActionId(mutterName) {
 
 function overrideAction(mutterName, action) {
     let id = getActionId(mutterName);
-    if (id === Meta.KeyBindingAction.NONE)
-        return;
     Main.wm.setCustomKeybindingHandler(mutterName, Shell.ActionMode.NORMAL,
                                        action.keyHandler);
+    if (id === Meta.KeyBindingAction.NONE)
+        return;
     actionIdMap[id] = action;
 }
 
