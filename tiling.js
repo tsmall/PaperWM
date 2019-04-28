@@ -876,12 +876,9 @@ class Space extends Array {
                              () => {
                                  if (this.settings.get_boolean('show-top-bar')) {
                                      this.showTopBar = 1;
-                                     TopBar.show();
                                  } else {
                                      this.showTopBar = 0;
-                                     TopBar.hide();
                                  }
-
                                  this.layout();
                              });
     }

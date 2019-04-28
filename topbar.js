@@ -161,6 +161,10 @@ class WorkspaceMenu extends PanelMenu.Button {
         this.menu.addMenuItem(this._zenItem);
         this._zenItem.connect('toggled', item => {
             Tiling.spaces.selectedSpace.settings.set_boolean('show-top-bar', item.state);
+            if (item.state)
+                show();
+            else
+                hide();
         });
 
         this.prefsIcon = new St.Button({ reactive: true,
