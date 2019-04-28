@@ -370,9 +370,9 @@ class Space extends Array {
             this._inLayout = false;
             return;
         }
-
-        let availableHeight = (workArea.height - prefs.vertical_margin);
-        let y0 = workArea.y - this.monitor.y + prefs.vertical_margin;
+        let availableHeight = (workArea.y - this.monitor.y + workArea.height -
+                               (panelBox.height)*this.showTopBar - prefs.vertical_margin);
+        let y0 = (panelBox.height)*this.showTopBar + prefs.vertical_margin;
         let fixPointAttempCount = 0;
 
         for (let i=0; i<this.length; i++) {
@@ -858,7 +858,12 @@ class Space extends Array {
         this.updateBackground();
         this.updateName();
         this.layout();
-        this.showTopBar = this.settings.get_boolean('show-top-bar');
+        if (this.settings.get_boolean('show-top-bar')) {
+            this.showTopBar = 1;
+        } else {
+            this.showTopBar = 0;
+        }
+
         this.signals.connect(this.settings, 'changed::name',
                              this.updateName.bind(this));
         this.signals.connect(Settings.settings, 'changed::use-workspace-name',
@@ -873,11 +878,11 @@ class Space extends Array {
                                      this.showTopBar = 1;
                                      TopBar.show();
                                  } else {
-                                     this.showTopBar = 1;
+                                     this.showTopBar = 0;
                                      TopBar.hide();
                                  }
 
-                                 this.layout.bind(this);
+                                 this.layout();
                              });
     }
 
