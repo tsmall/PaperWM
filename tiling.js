@@ -1389,6 +1389,9 @@ class Spaces extends Map {
     _initWorkspaceStack() {
         if (inPreview)
             return;
+        // Always show the topbar when using the workspace stack
+        inPreview = true;
+        TopBar.show();
         const scale = 0.9;
         let space = this.spaceOf(workspaceManager.get_active_workspace());
         let mru = [...this.stack];
@@ -1399,7 +1402,6 @@ class Spaces extends Map {
             Main.panel.statusArea.appMenu.container.hide();
         let monitor = space.monitor;
         this.selectedSpace = space;
-        inPreview = true;
 
         let cloneParent = space.clip.get_parent();
         mru.forEach((space, i) => {
